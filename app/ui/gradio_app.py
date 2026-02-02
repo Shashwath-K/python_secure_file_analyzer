@@ -5,9 +5,7 @@ import gradio as gr
 from app.services.file_analyzer import FileAnalyzer
 from app.services.report_generator import ReportGenerator
 from app.utils.validators import FileValidator, FileValidationError
-
-
-UPLOAD_DIR = "uploads"
+from app.config import UPLOAD_DIR
 
 
 def process_file(uploaded_file):
@@ -18,22 +16,32 @@ def process_file(uploaded_file):
     if uploaded_file is None:
         return "No file uploaded.", None
 
-    if not os.path.exists(UPLOAD_DIR):
-        os.makedirs(UPLOAD_DIR)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-    saved_file_path = os.path.join(UPLOAD_DIR, uploaded_file.name)
-    shutil.copy(uploaded_file, saved_file_path)
+    # Gradio already stores the file on disk
+    source_path = uploaded_file.name
+
+    # Extract only the filename (not full temp path)
+    filename = os.path.basename(source_path)
+    destination_path = os.path.join(UPLOAD_DIR, filename)
+
+    # Copy only if source and destination differ
+    if os.path.abspath(source_path) != os.path.abspath(destination_path):
+        shutil.copy(source_path, destination_path)
+    else:
+        destination_path = source_path
 
     validator = FileValidator()
     analyzer = FileAnalyzer()
     reporter = ReportGenerator()
 
     try:
-        validator.validate(saved_file_path)
-        analysis_result = analyzer.analyze(saved_file_path)
+        validator.validate(destination_path)
+        analysis_result = analyzer.analyze(destination_path)
+
         report_path = reporter.generate(
             analysis_data=analysis_result,
-            source_filename=uploaded_file.name,
+            source_filename=filename,
         )
 
         summary = (
