@@ -9,23 +9,15 @@ from app.config import UPLOAD_DIR
 
 
 def process_file(uploaded_file):
-    """
-    Orchestrates file validation, analysis, and report generation.
-    """
-
     if uploaded_file is None:
         return "No file uploaded.", None
 
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-    # Gradio already stores the file on disk
     source_path = uploaded_file.name
-
-    # Extract only the filename (not full temp path)
     filename = os.path.basename(source_path)
     destination_path = os.path.join(UPLOAD_DIR, filename)
 
-    # Copy only if source and destination differ
     if os.path.abspath(source_path) != os.path.abspath(destination_path):
         shutil.copy(source_path, destination_path)
     else:
@@ -62,34 +54,64 @@ def process_file(uploaded_file):
 
 
 def create_interface():
-    """
-    Builds and returns the Gradio interface.
-    """
+    with gr.Blocks(
+        title="Secure File Analyzer & Report Generator",
+        css="""
+        body {
+            font-family: Inter, system-ui, sans-serif;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+        }
+        .section {
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #ffffff;
+        }
+        """
+    ) as interface:
 
-    with gr.Blocks(title="Secure File Analyzer & Report Generator") as interface:
-        gr.Markdown("## Secure File Analyzer & Report Generator")
+        with gr.Column(elem_classes="container"):
+            gr.Markdown(
+                """
+                # Secure File Analyzer & Report Generator
+                Analyze text files securely and generate structured reports.
+                """
+            )
 
-        file_input = gr.File(
-            label="Upload a text file",
-            file_types=[".txt"]
-        )
+            with gr.Row():
+                with gr.Column(scale=1):
+                    gr.Markdown("### File Upload")
+                    file_input = gr.File(
+                        label="Select a text file",
+                        file_types=[".txt"]
+                    )
 
-        analyze_button = gr.Button("Analyze File")
+                with gr.Column(scale=1):
+                    gr.Markdown("### Action")
+                    analyze_button = gr.Button(
+                        "Analyze File",
+                        variant="primary"
+                    )
 
-        output_text = gr.Textbox(
-            label="Analysis Summary",
-            lines=10,
-            interactive=False
-        )
+            gr.Markdown("### Analysis Output")
 
-        output_file = gr.File(
-            label="Download Analysis Report"
-        )
+            output_text = gr.Textbox(
+                label="Analysis Summary",
+                lines=8,
+                interactive=False,
+                placeholder="Analysis results will appear here"
+            )
 
-        analyze_button.click(
-            fn=process_file,
-            inputs=file_input,
-            outputs=[output_text, output_file]
-        )
+            output_file = gr.File(
+                label="Generated Report"
+            )
+
+            analyze_button.click(
+                fn=process_file,
+                inputs=file_input,
+                outputs=[output_text, output_file]
+            )
 
     return interface
